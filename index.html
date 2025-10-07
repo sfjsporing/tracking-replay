@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GPS Track Replay</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <style>
+    #map { height: 90vh; margin:0; padding: 0; }
+    @media (max-width: 800px) {
+      #map { height: 85vh;}
+      #competitorList {max-width: 30vw; overflow-x: hidden;}
+      #competitorList li span { min-width: 20px; }
+      #competitorList li span { font-size: xx-small;}
+      #competitorList li span { min-width: 15px !important; }
+    }
+    #controls { margin: 10px; display: flex; gap: 10px; align-items: center; min-height: 50px; }
+    input[type=range] { width: 100%; }
+    #competitorList { position: absolute; top: 10px; right: 10px; background: white; padding: 10px; border-radius: 5px; max-height: 80vh; overflow-y: auto; z-index: 999; opacity: 0.9; }
+    #competitorList ul { list-style: none; padding: 0; margin: 0; }
+    #competitorList li { text-wrap-mode: nowrap; }
+    #competitorList li span { display: inline-block; min-width: 30px; padding: 0px; margin: 0px; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="controls">
+    <button id="playPause">Play</button>
+    <input type="range" id="timeline" min="0" max="0" step="1" value="0" />
+    <span id="timeDisplay"></span>
+  </div>
+  <span id="description">Replay of event "Queen And King of the Fjord + SM 2025" 2025-10-05 with data from webscorer. Webscorer was configured to record positions every 15s. Some competitors did not record. Checkboxes only work after the competitor has tracking data.</span><!--TODO: Fix this bug-->
+  <span id="competitorList"><span style="display: flex; align-items: right" id="clhide" onclick="clhide()"><i style="flex: 1; text-align: right;" class="fa fa-chevron-up" style="font-size:20px"></i></span></span>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="./randomColor.min.js"></script>
+  <script>
+    const map = L.map('map').setView([57.42, 12.05], 13);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    const markers = {};
+    const polylines = {};
+
+    const timeline = document.getElementById('timeline');
+    const timeDisplay = document.getElementById('timeDisplay');
+    const playPause = document.getElementById('playPause');
+
+    let competitors = [];
+    let earliest = Infinity, latest = -Infinity;
+    let currentTime = 0;
+    let intervalId = null;
+    let playing = false;
+    let clhidestatus = false;
+
+    function clhide() {
+      const competitorListUL = document.getElementById('competitorListUL');
+      if (clhidestatus) {
+        competitorListUL.style.display = 'block';
+        document.getElementById('clhide').children[0].classList.remove('fa-chevron-down');
+        document.getElementById('clhide').children[0].classList.add('fa-chevron-up');
+      } else {
+        competitorListUL.style.display = 'none';
+        document.getElementById('clhide').children[0].classList.remove('fa-chevron-up');
+        document.getElementById('clhide').children[0].classList.add('fa-chevron-down');
+      }
+      clhidestatus = !clhidestatus;
+    }
+
+    function parseDateTime(dateTimeStr) {
+      // Expected input format from webscorer: Jun 14, 2025  at 13:01:16 (GMT+2)
+      return Date.parse(dateTimeStr.split(',').join('').split(' at ').join().split('(').join().split(')').join());
+    }
+
+    function loadCompetitors(data) {
+      const startDateTime = new Date('2025-10-05T11:30:00');
+      const endDateTime = new Date('2025-10-05T13:00:00');
+      competitors = data.Racers.map(racer => {
+        //const color = '#' + Math.floor(Math.random()*16777215).toString(16);
+        const color = randomColor({ luminosity: 'bright', format: 'hex' });
+        const track = racer.Positions.map(p => ({
+          lat: p.Lat,
+          lon: p.Lon,
+          timestamp: parseDateTime(p.DateTime)
+        })).sort((a, b) => a.timestamp - b.timestamp).filter((elem) => elem.timestamp>startDateTime && elem.timestamp<endDateTime);
+        const bib = racer.Props.find(p => p.Name === 'Bib')?.Value || '';
+        const sortValue = parseInt(bib) || 0; // Sort by Bib number, default to 0 if not found
+        track.forEach(p => {
+          if (p.timestamp < earliest) earliest = p.timestamp;
+          if (p.timestamp > latest) latest = p.timestamp;
+        });
+
+        return {
+          name: racer.RacerId,
+          bib: racer.Props.find(p => p.Name === 'Bib')?.Value || '',
+          badData: racer.Props.find(p => p.Name === 'BadData')?.Value || false,
+          sortValue: sortValue,
+          color,
+          track
+        };
+      });
+      timeline.min = earliest;
+      timeline.max = latest;
+      currentTime = earliest;
+      updateMap(currentTime);
+
+      const competitorList = document.getElementById('competitorList');
+      const ul = competitorList.appendChild(
+        document.createElement('ul')
+      );
+      ul.id = 'competitorListUL';
+      competitors.sort((a, b) => {return a.sortValue - b.sortValue}).forEach(racer => {
+        const li = document.createElement('li');
+        const checkboxSpan = document.createElement('span');
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = true;
+        checkbox.disabled = true;
+        checkbox.id = racer.name;
+        checkboxSpan.appendChild(checkbox);
+        checkbox.addEventListener('change', () => {
+          if (currentTime>earliest) {
+            if (checkbox.checked) {
+              markers[racer.name].addTo(map);
+              polylines[racer.name].addTo(map);
+            } else {
+              map.removeLayer(markers[racer.name]);
+              map.removeLayer(polylines[racer.name]);
+            }
+          }
+        });
+        li.appendChild(checkboxSpan);
+        const bibSpan = document.createElement('span');
+        li.appendChild(bibSpan);
+        bibSpan.textContent = racer.bib + (racer.badData ? '*' : '');
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = `${racer.name}`;
+        nameSpan.style.color = racer.color;
+        li.appendChild(nameSpan);
+        ul.appendChild(li);
+      });
+      competitorList.appendChild(ul);
+    }
+
+    function updateMap(time) {
+      if (time > earliest) {
+        //enable all checkboxes
+        const checkboxes = document.querySelectorAll('#competitorList input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+          if (checkbox.disabled && markers[checkbox.id])
+            checkbox.disabled = false;
+        });
+      }
+      else {
+        //disable all checkboxes
+        const checkboxes = document.querySelectorAll('#competitorList input[type="checkbox"]');
+        checkboxes.forEach(checkbox => {
+          checkbox.disabled = true;
+          checkbox.checked = true;
+        });
+      }
+
+      timeDisplay.textContent = `Time: ${new Date(time).toLocaleTimeString()}`;
+
+      competitors.forEach(c => {
+        const visibleTrack = c.track.filter(p => p.timestamp <= time);
+        if (visibleTrack.length > 0) {
+          const last = visibleTrack[visibleTrack.length - 1];
+          if (!markers[c.name]) {
+            markers[c.name] = L.circleMarker([last.lat, last.lon], {
+              color: c.color,
+              radius: 6
+            }).addTo(map).bindTooltip((c.bib.length>0 ? c.bib + ' - ' : '') + c.name);
+            polylines[c.name] = L.polyline([], { color: c.color, opacity: 0.2, interactive: false }).addTo(map);
+          }
+          markers[c.name].setLatLng([last.lat, last.lon]);
+          polylines[c.name].setLatLngs(visibleTrack.map(p => [p.lat, p.lon]));
+        }
+      });
+    }
+
+    playPause.addEventListener('click', () => {
+      playing = !playing;
+      playPause.textContent = playing ? 'Pause' : 'Play';
+      if (playing) {
+        intervalId = setInterval(() => {
+          if (currentTime > latest) {
+            clearInterval(intervalId);
+            playing = false;
+            playPause.textContent = 'Play';
+            return;
+          }
+          updateMap(currentTime);
+          timeline.value = currentTime;
+          currentTime = currentTime + 30000; // Increment by 30 seconds
+        }, 1000);
+      } else {
+        clearInterval(intervalId);
+      }
+    });
+
+    timeline.addEventListener('input', (e) => {
+      currentTime = parseInt(e.target.value);
+      updateMap(currentTime);
+    });
+
+    // Load JSON data from URL
+    const dataUrl = './data/2025-10-05-QnK/allracers.json';
+    fetch(dataUrl)
+      .then(response => response.json())
+      .then(data => loadCompetitors(data))
+      .catch(error => console.error('Failed to load JSON:', error));
+  </script>
+</body>
+</html>
