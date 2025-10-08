@@ -1,4 +1,4 @@
-#Description
+# Description
 This repo holds instructions and html for showing a basic replay of GPS tracking data from webscorer.com
 External packages in use:
  - https://github.com/Leaflet/Leaflet
@@ -6,7 +6,7 @@ External packages in use:
  - https://github.com/davidmerfield/randomColor
  - https://fontawesome.com/
 
-#Getting data from webscorer
+# Getting data from webscorer
  - Log in to webscorer on web
  - Find the race results
  - Go to 'GPS tracking of racers'
@@ -16,7 +16,7 @@ External packages in use:
  - Save the response generated in the browser. ex: https://www.webscorer.com/racemap/viewracersel?raceid=385956&resultid=394347
     For example as racer1.txt, racer2.txt etc. and put them in a directory
 
-#Parsing the responses
+# Parsing the responses
 Get the location json from the responses
 ```
 for filename in racer*.txt ; do
@@ -24,18 +24,18 @@ for filename in racer*.txt ; do
 done
 ```
 
-#Combining into one big json
+# Combining into one big json
 ```
 jq -s '{Racers: .}' racer*.json > allracers.json
 ```
 
-#Edit html
+# Edit html
  - Update description
  - Update dataUrl
  - Update setView coordinates
  - Update startDateTime/endDateTime to filter out positions outside of interest
 
- #Edit the big json after reviewing the replay
+ # Edit the big json after reviewing the replay
  - If some competitors have bad tracking data, mark them by adding to their Props:
  ```
         {
