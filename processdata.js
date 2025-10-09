@@ -5,13 +5,15 @@ const randomColor = require('randomcolor');
 // Read filename from command line argument
 const filename = process.argv[2] || 'allracers.json';
 
+// Set event spesific details here
+const description = 'Replay of event "Queen And King of the Fjord + SM 2025" 2025-10-05 with data from webscorer. Webscorer was configured to record positions every 15s. Some competitors did not record. Checkboxes only work after the competitor has tracking data.';
 const startDateTime = new Date('2025-10-05T11:30:00');
 const endDateTime = new Date('2025-10-05T13:00:00');
 let earliest = Infinity, latest = -Infinity;
 
 // Read and parse the JSON file
 const data = JSON.parse(fs.readFileSync(path.resolve(__dirname, filename), 'utf8'));
-// Map data, convert and sort timestamps in track
+// Map data, generate colors, convert and sort timestamps in track, filter out of range positions, sort racers by gender and bib number
 let racers = data.Racers.map( (racer, i) => {
     const bib = racer.Props.find(p => p.Name === 'Bib')?.Value || '';
     return {
@@ -20,7 +22,7 @@ let racers = data.Racers.map( (racer, i) => {
         color: randomColor({ luminosity: 'bright', format: 'hex' }),
         bib: bib,
         badData: racer.Props.find(p => p.Name === 'BadData')?.Value || false,
-        sortValue: (racer.Props.find(p => p.Name === 'Gender')?.Value==='Male' ? 1000 : 0) + (parseInt(bib) || 0), // Sort by Bib number, default to 0 if not found
+        sortValue: (racer.Props.find(p => p.Name === 'Gender')?.Value==='Male' ? 10000 : 0) + (parseInt(bib) || 0), // Sort by Bib number, default to 0 if not found
         track: racer.Positions.map(p => ({
             lat: p.Lat,
             lon: p.Lon,
@@ -28,7 +30,7 @@ let racers = data.Racers.map( (racer, i) => {
         })).sort((a, b) => a.timestamp - b.timestamp).filter((elem) => elem.timestamp>startDateTime && elem.timestamp<endDateTime)
     };
 }).sort((a, b) => a.sortValue - b.sortValue);
-// Process each racer's track to calculate distances and speeds
+// Now that positions are sorted by timestamp, process each racer's track to calculate distances and speeds
 racers.forEach(racer => {
     racer.track = racer.track.map(p => {
         // Calculate speed from previous position if available
@@ -63,14 +65,12 @@ racers.forEach(racer => {
     latest = Math.max(latest, racer.track[racer.track.length - 1]?.timestamp || -Infinity);
 });
 
-//console.dir(racers, {depth: 1, maxArrayLength: 40});
-
 // Output the processed data
 let pathFromFilename = filename.split('.').slice(0, -1).join('.');
 console.log('Processed ', racers.length, 'racers from', filename, 'to', pathFromFilename + '_processed.json');
 fs.writeFileSync(path.resolve(__dirname, pathFromFilename + '_processed.json'), JSON.stringify(
     {
-        description: 'Replay of event "Queen And King of the Fjord + SM 2025" 2025-10-05 with data from webscorer. Webscorer was configured to record positions every 15s. Some competitors did not record. Checkboxes only work after the competitor has tracking data.',
+        description: description,
         earliest: earliest,
         latest: latest,
         racers: racers

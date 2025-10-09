@@ -39,12 +39,18 @@ jq -s '{Racers: .}' racer*.json > allracers.json
  ```
 
 # Process the big json
+Install randomcolor if not already done so
+```
+npm install randomcolor
+```
+## Edit processdata.js
+ - Update description
+ - Update startDateTime/endDateTime to filter out positions outside of interest
+Process the big json to alter the data structure. This will generate colors, parse and sort datetimes, add calculated distances and speeds, set event description etc
 ```
 node processdata.js allracers.json
 ```
 
 # Edit html
- - Update description
  - Update dataUrl
  - Update setView coordinates
- - Update startDateTime/endDateTime to filter out positions outside of interest
