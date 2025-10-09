@@ -46,7 +46,8 @@ npm install randomcolor
 ## Edit processdata.js
  - Update description
  - Update startDateTime/endDateTime to filter out positions outside of interest
-## Process the big json to alter the data structure. This will generate colors, parse and sort datetimes, add calculated distances and speeds, set event description etc
+## Process the big json to alter the data structure.
+This will generate colors, parse and sort datetimes, add calculated distances and speeds, set event description etc
 ```
 node processdata.js allracers.json
 ```
