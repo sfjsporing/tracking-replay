@@ -29,13 +29,7 @@ done
 jq -s '{Racers: .}' racer*.json > allracers.json
 ```
 
-# Edit html
- - Update description
- - Update dataUrl
- - Update setView coordinates
- - Update startDateTime/endDateTime to filter out positions outside of interest
-
- # Edit the big json after reviewing the replay
+# Edit the big json after reviewing the replay
  - If some competitors have bad tracking data, mark them by adding to their Props:
  ```
         {
@@ -43,3 +37,14 @@ jq -s '{Racers: .}' racer*.json > allracers.json
           "Value": true
         }
  ```
+
+# Process the big json
+´´´
+node processdata.js allracers.json
+´´´
+
+# Edit html
+ - Update description
+ - Update dataUrl
+ - Update setView coordinates
+ - Update startDateTime/endDateTime to filter out positions outside of interest
