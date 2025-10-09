@@ -39,9 +39,9 @@ jq -s '{Racers: .}' racer*.json > allracers.json
  ```
 
 # Process the big json
-´´´
+```
 node processdata.js allracers.json
-´´´
+```
 
 # Edit html
  - Update description
