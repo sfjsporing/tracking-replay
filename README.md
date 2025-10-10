@@ -5,8 +5,18 @@ External packages in use:
    - with map data from https://www.openstreetmap.org/
  - https://github.com/davidmerfield/randomColor
  - https://fontawesome.com/
+ - https://pptr.dev/
 
 # Getting data from webscorer
+### Automatically
+```
+node capturedata.js <raceId>
+
+for filename in racer*.txt ; do
+    cat ${filename} | xmllint --xpath '//span/text()' - | jq '{RacerId: .Racers[0].RacerId, Props: .Racers[0].Props, Positions: [.Racers[] | {Lat: .Latitude, Lon: .Longitude, DateTime: .DateTime, Seq: .Offset}]}' > ${filename%%.*}.json
+done
+```
+### Manually
  - Log in to webscorer on web
  - Find the race results
  - Go to 'GPS tracking of racers'
@@ -15,9 +25,7 @@ External packages in use:
  - Select a racer
  - Save the response generated in the browser. ex: https://www.webscorer.com/racemap/viewracersel?raceid=385956&resultid=394347
     For example as racer1.txt, racer2.txt etc. and put them in a directory
-
-# Parsing the responses
-Get the location json from the responses
+ - Get the location json from the responses
 ```
 for filename in racer*.txt ; do
     grep "racerlocationsjson" ${filename} | xmllint --xpath '//span/text()' - | jq '{RacerId: .Racers[0].RacerId, Props: .Racers[0].Props, Positions: [.Racers[] | {Lat: .Latitude, Lon: .Longitude, DateTime: .DateTime, Seq: .Offset}]}' > ${filename%%.*}.json
@@ -43,10 +51,10 @@ Install randomcolor if not already done so
 ```
 npm install randomcolor
 ```
-## Edit processdata.js
+### Edit processdata.js
  - Update description
  - Update startDateTime/endDateTime to filter out positions outside of interest
-## Process the big json to alter the data structure.
+### Process the big json to alter the data structure.
 This will generate colors, parse and sort datetimes, add calculated distances and speeds, set event description etc
 ```
 node processdata.js allracers.json

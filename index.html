@@ -42,7 +42,7 @@
 
   <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    const map = L.map('map').setView([57.42, 12.05], 13);
+    const map = L.map('map').setView([56.28, 12.71], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
@@ -212,7 +212,7 @@
     });
 
     // Load JSON data from URL
-    const dataUrl = './data/2025-10-05-QnK/allracers_processed.json';
+    const dataUrl = './data/390775/allracers_processed.json';
     fetch(dataUrl)
       .then(response => response.json())
       .then(data => loadData(data))

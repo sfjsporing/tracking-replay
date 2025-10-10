@@ -6,9 +6,9 @@ const randomColor = require('randomcolor');
 const filename = process.argv[2] || 'allracers.json';
 
 // Set event spesific details here
-const description = 'Replay of event "Queen And King of the Fjord + SM 2025" 2025-10-05 with data from webscorer. Webscorer was configured to record positions every 15s. Some competitors did not record. Checkboxes only work after the competitor has tracking data.';
-const startDateTime = new Date('2025-10-05T11:30:00');
-const endDateTime = new Date('2025-10-05T13:00:00');
+const description = 'Replay of event "Aterra Wave Challenge 2025 Main race" 2025-07-05 with data from webscorer. Some competitors may not have recorded. Checkboxes only work after the competitor has tracking data.';
+const startDateTime = new Date('2025-07-05T13:30:00');
+const endDateTime = new Date('2025-07-05T16:10:00');
 let earliest = Infinity, latest = -Infinity;
 
 // Read and parse the JSON file
