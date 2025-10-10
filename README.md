@@ -9,6 +9,10 @@ External packages in use:
 
 # Getting data from webscorer
 ### Automatically
+Install puppeteer if not already done so
+```
+npm install puppeteer
+```
 ```
 node capturedata.js <raceId>
 
